@@ -1,57 +1,70 @@
 #include <stdio.h>
+#include <malloc.h>
 #include "Cooperative.h"
 #include "Tasker.h"
 
-int task2(int v1, float v2) {
-  static TaskBlock taskBlock = {.state = 0};
-  TaskBlock *tb = &taskBlock;
+Tcb1 *createTask1Tcb(char name) {
+  Tcb1 *tcb = malloc(sizeof(Tcb1));
+  tcb->state = 0;
+  tcb->name = name;
+  return tcb;
+}
 
-  startTask(tb);
+Tcb2 *createTask2Tcb(char name) {
+  Tcb2 *tcb = malloc(sizeof(Tcb2));
+  tcb->state = 0;
+  tcb->name = name;
+  return tcb;
+}
 
-  printf("\ttask2: 1 (%d) | yield\n", v1);
-  yield(tb);
+int task2(Tcb2 *tcb, int v1, float v2) {
+  startTask(tcb);
 
-  printf("\ttask2: 2 (%f) | yield\n", v2);
-  yield(tb);
+  printf("\ttask%c2: 1 (%d) | yield\n", tcb->name, v1);
+  yield(tcb);
+
+  printf("\ttask%c2: 2 (%f) | yield\n", tcb->name, v2);
+  yield(tcb);
 
   if(v1 < 500) {
-    printf("\ttask2: 3 | return 111\n");
-    returnThis(111, tb);
+    printf("\ttask%c2: 3 | return 111\n");
+    returnThis(111, tcb);
   } else {
-    printf("\ttask2: 3 | return 999\n");
-    returnThis(999, tb);
+    printf("\ttask%c2: 3 | return 999\n");
+    returnThis(999, tcb);
   }
 
-  endTask(tb);
+  endTask(tcb);
 }
 
 
-double task1() {
-  static TaskBlock taskBlock = {.state = 0};
-  TaskBlock *tb = &taskBlock;
+double task1(Tcb1 *tcb) {
   int result;
 
-  startTask(tb);
+  startTask(tcb);
 
-  printf("task1: 1 | yield\n");
-  yield(tb);
-
-  // The following will wait till task2() returns. The result will
-  // be stored in 'result'.
-  await(result, task2(34, 67.8976), tb);
-
-  printf("task1: 2 (result from task2 = %d) | yield\n", result);
-  yield(tb);
+  printf("task%c1: 1 | yield\n", tcb->name);
+  yield(tcb);
 
   // The following will wait till task2() returns. The result will
   // be stored in 'result'.
-  await(result, task2(98765, 0.123456), tb);
+  tcb->tcb2 = createTask2Tcb(tcb->name);
+  await(result, task2(tcb->tcb2, 34, 67.8976), tcb);
 
-  printf("task1: 3 (result from task2 = %d) | yield\n", result);
-  yield(tb);
+  printf("task%c1: 2 (result from task2 = %d) | yield\n", tcb->name, tcb->name, result);
+  yield(tcb);
 
-  printf("task1: 4 | return 789.12345\n");
-  returnThis(789.12345, tb);
+  // The following will wait till task2() returns. The result will
+  // be stored in 'result'.
+  resetTask(tcb->tcb2);
+  await(result, task2(tcb->tcb2, 98765, 0.123456), tcb);
+  free(tcb->tcb2);
 
-  endTask(tb);
+  printf("task%c1: 3 (result from task%c2 = %d) | yield\n", tcb->name, tcb->name, result);
+  yield(tcb);
+
+  printf("task%c1: 4 | return 789.12345\n", tcb->name);
+  returnThis(789.12345, tcb);
+
+  endTask(tcb);
 }

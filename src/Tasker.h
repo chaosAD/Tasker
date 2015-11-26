@@ -1,10 +1,5 @@
-#ifndef Yield_H
-#define Yield_H
-
-typedef struct
-{
-  int state ;
-} TaskBlock;
+#ifndef Tasker_H
+#define Tasker_H
 
 extern int isYielding;
 
@@ -16,4 +11,4 @@ extern int isYielding;
 #define await(result, func, x)    do {case __LINE__:; (x)->state = __LINE__; (result) = (func); if(isYielding) return 0;} while(0)
 #define returnThis(result, x)     do {isYielding = 0; (x)->state = 0; return result;} while(0)
 
-#endif // Yield_H
+#endif // Tasker_H
